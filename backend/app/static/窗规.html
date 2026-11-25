@@ -47,6 +47,14 @@
         <pre class="回执" id="规">加载中…</pre>
       </section>
       <section class="卷">
+        <h2>多源串扰隔离策略（中文读法）</h2>
+        <p class="说明" id="多源策略">加载中…</p>
+        <div class="双栏">
+          <p class="说明" id="多源解释">加载中…</p>
+          <div class="侧注">策略在「网点源」页切换；本页只读。坏口径不落库，装载关窗按窗规同成同败。</div>
+        </div>
+      </section>
+      <section class="卷">
         <h2>空桩目录</h2>
         <p class="说明" id="空桩"></p>
         <div class="双栏">
@@ -59,6 +67,12 @@
         document.getElementById("规").textContent = JSON.stringify(await 潮切.getJSON("/api/窗规"), null, 2);
         const s = await 潮切.getJSON("/api/空桩");
         document.getElementById("空桩").textContent = "空桩 " + s.条数 + "：" + (s.空桩 || []).join(" · ");
+        const d = await 潮切.getJSON("/api/多源隔离");
+        document.getElementById("多源策略").textContent =
+          `窗规键「${d["窗规键"]}」当前值：${d["策略"]}（可选：${(d["形态"] || []).join(" / ")}，默认复合隔离）`;
+        document.getElementById("多源解释").textContent = d["策略"] === "复合隔离"
+          ? "复合隔离：切片键=窗号+源键+运单键，东站与西港同运单物化成两行片，源不串片；关窗加互斥锁，并发只准一个成功。"
+          : "运单合并：同运单合并进现行一片，每源事件写只读多源归档，下游读归档区分来源；无归档的单行片判 invalid。";
       })();
       </script>
 

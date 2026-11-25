@@ -90,3 +90,14 @@ export function verifyExplainer(row) {
   if (row["是否对齐"]) return "缓冲已物化事件数与切片账事件数一致，窗账闭合。";
   return row["说明"] || "缓冲与切片撕裂，需回查关窗批次。";
 }
+
+export function 多源观测卡(d) {
+  const 视图 = (d && d["运单视图"]) || [];
+  return [
+    { key: "隔离策略", value: (d && d["策略"]) || "?", hint: "复合隔离 / 运单合并" },
+    { key: "隔离运单", value: 视图.length, hint: "已成片运单数" },
+    { key: "切片行数", value: 视图.reduce((s, v) => s + (v["片行数"] || 0), 0), hint: "复合口径同运单可多行" },
+    { key: "只读归档", value: (d && d["归档笔数"]) || 0, hint: "合并口径源明细" },
+    { key: "invalid", value: 视图.filter((v) => !v["valid"]).length, hint: "缺归档或源串片" },
+  ];
+}

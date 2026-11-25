@@ -39,21 +39,48 @@
     <main class="主区">
       <header class="页头">
         <h1>观测流</h1>
-        <p>装载后的轨迹事件命运流水：已装载 / 已入缓冲 / 已迟到 / 已成片。</p>
+        <p>装载后的轨迹事件命运流水：已装载 / 已入缓冲 / 已迟到 / 已成片。网点源未登记即驳回，源维度命运见下。</p>
       </header>
+
+      <section class="卷">
+        <h2>多源隔离观测卡片</h2>
+        <div class="水位" id="多源卡"></div>
+        <p class="说明" id="多源注">加载中…</p>
+      </section>
 
       <section class="卷">
         <div class="表绕"><table><thead><tr><th>事件编号</th><th>运单键</th><th>网点键</th><th>事件时</th><th>命运</th></tr></thead><tbody id="表"></tbody></table></div>
       </section>
-      <section class="卷"><div class="双栏"><p class="说明">观测点是装载入流。命运应在本页可读：已装载→已入缓冲/已迟到→已成片。</p><div class="侧注">版式：左侧窗时间轴。对拍是顶栏双轨，肉眼应能分开。</div></div></section>
+      <section class="卷"><div class="双栏"><p class="说明">观测点是装载入流。命运应在本页可读：已装载→已入缓冲/已迟到→已成片。多源同运单是否串片，去窗切片账看源键与归档。</p><div class="侧注">版式：左侧窗时间轴。对拍是顶栏双轨，肉眼应能分开。</div></div></section>
       <script>
       (async () => {
         const rows = await 潮切.getJSON("/api/观测点");
         const tb = document.getElementById("表");
-        if (!rows.length) { tb.innerHTML = `<tr><td colspan="5">${潮切.空态("尚无观测点。回潮切台灌窗内成片样例。")}</td></tr>`; return; }
+        if (!rows.length) { tb.innerHTML = `<tr><td colspan="5">${潮切.空态("尚无观测点。回潮切台灌窗内成片样例。")}</td></tr>`; }
         for (const r of rows) {
-          tb.appendChild(潮切.行(`<td>${潮切.安全文本(r.事件编号)}</td><td>${潮切.安全文本(r.运单键)}</td><td>${潮切.安全文本(r.网点键)}</td><td>${潮切.安全文本(r.事件时)}</td><td>${潮切.徽章(r.命运)}</td>`));
+          tb.appendChild(潮切.行(`<td>${潮切.安全文本(r.事件编号)}</td><td>${潮切.安全文本(r.运单键)}</td><td>${潮切.徽章(r.网点键, "好")}</td><td>${潮切.安全文本(r.事件时)}</td><td>${潮切.徽章(r.命运)}</td>`));
         }
+        const d = await 潮切.getJSON("/api/多源隔离");
+        const 卡 = document.getElementById("多源卡");
+        const 视图 = d["运单视图"] || [];
+        const 片行 = 视图.reduce((s, v) => s + (v["片行数"] || 0), 0);
+        const 失效 = 视图.filter((v) => !v["valid"]).length;
+        for (const [标, 值, 提示] of [
+          ["隔离策略", d["策略"], "复合隔离 / 运单合并"],
+          ["隔离运单", 视图.length, "已成片运单数"],
+          ["切片行数", 片行, "复合口径同运单可多行"],
+          ["只读归档", d["归档笔数"], "合并口径源明细"],
+          ["invalid", 失效, "缺归档或源串片"],
+        ]) {
+          const el = document.createElement("div");
+          el.className = "水卡";
+          el.innerHTML = `<div class="数">${潮切.安全文本(String(值))}</div><div class="标">${潮切.安全文本(标)}<br/><span style="opacity:.7">${潮切.安全文本(提示)}</span></div>`;
+          卡.appendChild(el);
+        }
+        document.getElementById("多源注").textContent =
+          `当前${d["策略"]}：` + (d["策略"] === "复合隔离"
+            ? "切片键=源键+运单键，东站与西港同运单各出一片，源不串片。"
+            : "同运单合并成现行一片，源明细进只读多源归档，下游读归档区分来源。");
       })();
       </script>
 

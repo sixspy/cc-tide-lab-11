@@ -90,3 +90,19 @@ export function verifyExplainer(row) {
   if (row["是否对齐"]) return "缓冲已物化事件数与切片账事件数一致，窗账闭合。";
   return row["说明"] || "缓冲与切片撕裂，需回查关窗批次。";
 }
+
+export function 切片源读法(row) {
+  // 复合隔离片自带源键；合并片源键留空，源明细去只读多源归档找
+  if (row["隔离形态"] === "复合隔离") return row["源键"] || "缺源键(invalid)";
+  if (row["隔离形态"] === "运单合并") return "合并片→见多源归档";
+  return row["源键"] || "";
+}
+
+export function 归档行(a) {
+  return {
+    切片编号: a["切片编号"],
+    运单键: a["运单键"],
+    源键: a["源键"],
+    事件数: a["事件数"],
+  };
+}

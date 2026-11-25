@@ -39,16 +39,21 @@
     <main class="主区">
       <header class="页头">
         <h1>窗切片账</h1>
-        <p>关窗后按运单物化的正式切片。这是关窗管道产物，不是行程成对，也不是对齐差。</p>
+        <p>关窗后物化的正式切片。多源隔离：复合口径按源键+运单键出两行片；合并口径同运单一一片，源明细进只读归档。</p>
       </header>
 
       <section class="卷">
         <div class="工具"><button class="按钮 青" id="关">关当前窗</button></div>
-        <div class="表绕"><table><thead><tr><th>切片编号</th><th>窗号</th><th>运单键</th><th>事件数</th><th>物化时</th></tr></thead><tbody id="表"></tbody></table></div>
+        <div class="表绕"><table><thead><tr><th>切片编号</th><th>窗号</th><th>运单键</th><th>源键</th><th>隔离形态</th><th>事件数</th><th>物化时</th></tr></thead><tbody id="表"></tbody></table></div>
+      </section>
+      <section class="卷">
+        <h2>多源只读归档（仅运单合并口径产生）</h2>
+        <div class="表绕"><table><thead><tr><th>切片编号</th><th>运单键</th><th>源键</th><th>事件数</th><th>窗号</th><th>物化时</th></tr></thead><tbody id="归档表"></tbody></table></div>
+        <p class="说明">合并片缺归档 = 源串扰混片，窗贯验附加检查会判不对齐。</p>
       </section>
       <section class="卷">
         <div class="双栏">
-          <p class="说明">切片按运单聚合事件数。邻题空桩可改半截回滚/封印写闸，基线只做整窗物化。</p>
+          <p class="说明">切片按（源、运单）聚合事件数。复合隔离两源同运单必须两行片；运单合并一片但归档保留每源明细。</p>
           <div class="侧注">去皮：关窗管道。勿抄对拍左右轨命名。</div>
         </div>
       </section>
@@ -56,9 +61,17 @@
       async function 刷() {
         const rows = await 潮切.getJSON("/api/窗切片账");
         const tb = document.getElementById("表"); tb.innerHTML = "";
-        if (!rows.length) { tb.innerHTML = `<tr><td colspan="5">${潮切.空态("尚无切片。装载窗内事件后点关当前窗。")}</td></tr>`; return; }
+        if (!rows.length) { tb.innerHTML = `<tr><td colspan="7">${潮切.空态("尚无切片。装载窗内事件后点关当前窗。")}</td></tr>`; }
         for (const r of rows) {
-          tb.appendChild(潮切.行(`<td>${潮切.安全文本(r.切片编号)}</td><td>${潮切.安全文本(r.窗号)}</td><td>${潮切.安全文本(r.运单键)}</td><td>${r.事件数}</td><td>${潮切.安全文本(r.物化时)}</td>`));
+          const 源 = r.源键 ? 潮切.安全文本(r.源键) : `<span class="说明">（合并片见归档）</span>`;
+          tb.appendChild(潮切.行(`<td>${潮切.安全文本(r.切片编号)}</td><td>${潮切.安全文本(r.窗号)}</td><td>${潮切.安全文本(r.运单键)}</td><td>${源}</td><td>${潮切.安全文本(r.隔离形态 || "")}</td><td>${r.事件数}</td><td>${潮切.安全文本(r.物化时)}</td>`));
+        }
+        const d = await 潮切.getJSON("/api/多源隔离/归档");
+        const ab = document.getElementById("归档表"); ab.innerHTML = "";
+        const 档 = d["归档"] || [];
+        if (!档.length) { ab.innerHTML = `<tr><td colspan="6">${潮切.空态("无归档。复合口径不产归档；切到运单合并并关窗后在此看源明细。")}</td></tr>`; }
+        for (const a of 档) {
+          ab.appendChild(潮切.行(`<td>${潮切.安全文本(a.切片编号)}</td><td>${潮切.安全文本(a.运单键)}</td><td>${潮切.徽章(a.源键, "好")}</td><td>${a.事件数}</td><td>${潮切.安全文本(a.窗号)}</td><td>${潮切.安全文本(a.物化时)}</td>`));
         }
       }
       document.getElementById("关").onclick = async () => { await 潮切.postJSON("/api/关窗/跑"); await 刷(); };

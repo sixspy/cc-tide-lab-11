@@ -70,6 +70,7 @@
         <div class="水位" id="水位"></div>
         <div class="工具">
           <button class="按钮" id="灌成片">灌窗内成片样例</button>
+          <button class="按钮" id="灌多源">灌多源同运单样例</button>
           <button class="按钮 次" id="灌迟到">灌迟到样例</button>
           <button class="按钮 青" id="关窗">关当前窗</button>
           <button class="按钮 次" id="贯验">跑窗贯验</button>
@@ -92,6 +93,7 @@
         } catch (e) { el.textContent = String(e); }
       }
       document.getElementById("灌成片").onclick = () => 跑(() => 潮切.postJSON("/api/观测点/夹具/窗内成片样例"));
+      document.getElementById("灌多源").onclick = () => 跑(() => 潮切.postJSON("/api/观测点/夹具/多源同运单样例"));
       document.getElementById("灌迟到").onclick = () => 跑(() => 潮切.postJSON("/api/观测点/夹具/迟到样例"));
       document.getElementById("关窗").onclick = () => 跑(() => 潮切.postJSON("/api/关窗/跑"));
       document.getElementById("贯验").onclick = () => 跑(() => 潮切.postJSON("/api/窗贯验/跑"));

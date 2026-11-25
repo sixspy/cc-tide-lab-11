@@ -2,7 +2,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from pathlib import Path
-from app.services import 目录, 装载, 关窗, 贯验, 夹具, 统计, 说明
+from app.services import 目录, 装载, 关窗, 贯验, 夹具, 统计, 说明, 多源
 
 
 async def api_概览(request: Request):
@@ -89,6 +89,30 @@ async def api_空桩(request: Request):
     return JSONResponse({"空桩": out, "条数": len(out)})
 
 
+async def api_多源隔离(request: Request):
+    return JSONResponse({
+        **多源.概览(),
+        "运单视图": 多源.运单隔离视图(),
+    })
+
+
+async def api_多源归档(request: Request):
+    运单 = request.query_params.get("运单键")
+    return JSONResponse({"归档": 多源.归档列表(运单)})
+
+
+async def api_多源策略(request: Request):
+    body = await request.json()
+    try:
+        多源.设策略((body or {}).get("值", ""))
+    except ValueError as e:
+        return JSONResponse({"错误": str(e)}, status_code=400)
+    return JSONResponse({
+        **多源.概览(),
+        "运单视图": 多源.运单隔离视图(),
+    })
+
+
 路由表 = [
     Route("/api/概览", api_概览),
     Route("/api/仓情", api_仓情),
@@ -107,5 +131,8 @@ async def api_空桩(request: Request):
     Route("/api/窗贯验/跑", api_贯验, methods=["POST"]),
     Route("/api/统计/观测命运", api_统计观测),
     Route("/api/统计/缓冲命运", api_统计缓冲),
+    Route("/api/多源隔离", api_多源隔离),
+    Route("/api/多源隔离/归档", api_多源归档),
+    Route("/api/多源隔离/策略", api_多源策略, methods=["POST"]),
     Route("/api/空桩", api_空桩),
 ]

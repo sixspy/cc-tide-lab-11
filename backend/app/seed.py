@@ -34,11 +34,31 @@ CREATE TABLE IF NOT EXISTS 窗切片账 (
   切片编号 TEXT PRIMARY KEY,
   窗号 TEXT NOT NULL,
   运单键 TEXT NOT NULL,
+  源键 TEXT NOT NULL DEFAULT '',
+  隔离形态 TEXT NOT NULL DEFAULT '',
   事件数 INTEGER NOT NULL,
   窗起 TEXT NOT NULL,
   窗止 TEXT NOT NULL,
   物化时 TEXT NOT NULL,
   命运 TEXT NOT NULL DEFAULT '已成片'
+);
+CREATE TABLE IF NOT EXISTS 多源归档 (
+  编号 INTEGER PRIMARY KEY AUTOINCREMENT,
+  切片编号 TEXT NOT NULL,
+  窗号 TEXT NOT NULL,
+  运单键 TEXT NOT NULL,
+  源键 TEXT NOT NULL,
+  事件数 INTEGER NOT NULL,
+  窗起 TEXT NOT NULL,
+  窗止 TEXT NOT NULL,
+  物化时 TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_多源归档_运单 ON 多源归档(运单键);
+CREATE TABLE IF NOT EXISTS 关窗锁 (
+  编号 TEXT PRIMARY KEY,
+  窗号 TEXT NOT NULL,
+  加锁时 TEXT NOT NULL,
+  批次 TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS 迟到匣 (
   编号 INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,6 +102,12 @@ def 此刻() -> str:
 def 初始化库() -> None:
     conn = 连接()
     conn.executescript(建表)
+    # 旧库迁移：窗切片账补多源列（新库建表已含，跳过）
+    现有列 = {r["name"] for r in conn.execute("PRAGMA table_info(窗切片账)").fetchall()}
+    if "源键" not in 现有列:
+        conn.execute("ALTER TABLE 窗切片账 ADD COLUMN 源键 TEXT NOT NULL DEFAULT ''")
+    if "隔离形态" not in 现有列:
+        conn.execute("ALTER TABLE 窗切片账 ADD COLUMN 隔离形态 TEXT NOT NULL DEFAULT ''")
     if conn.execute("SELECT COUNT(*) AS c FROM 窗规").fetchone()["c"] == 0:
         for k, v in {
             "窗长秒": "3600",
@@ -90,6 +116,7 @@ def 初始化库() -> None:
             "当前窗号": "W-demo",
             "窗起": "2026-11-24T00:00:00Z",
             "窗止": "2026-11-24T01:00:00Z",
+            "多源隔离策略": "复合隔离",
         }.items():
             conn.execute("INSERT INTO 窗规(键,值) VALUES (?,?)", (k, v))
     if conn.execute("SELECT COUNT(*) AS c FROM 网点源").fetchone()["c"] == 0:
@@ -101,5 +128,8 @@ def 初始化库() -> None:
             conn.execute(
                 "INSERT INTO 网点源(源键,名称,区域,说明) VALUES (?,?,?,?)", row
             )
+    # 旧库补多源隔离策略默认值
+    if not conn.execute("SELECT 1 FROM 窗规 WHERE 键=?", ("多源隔离策略",)).fetchone():
+        conn.execute("INSERT INTO 窗规(键,值) VALUES (?,?)", ("多源隔离策略", "复合隔离"))
     conn.commit()
     conn.close()

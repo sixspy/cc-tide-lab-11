@@ -39,20 +39,58 @@
     <main class="主区">
       <header class="页头">
         <h1>网点源</h1>
-        <p>轨迹上报网点目录。空桩「多源串扰隔离」「观测点换绑」在此扩展。</p>
+        <p>轨迹上报网点目录。空桩「多源串扰隔离」「观测点换绑」在此扩展。未登记源装载即驳回。</p>
       </header>
+
+      <section class="卷">
+        <h2>多源串扰隔离策略</h2>
+        <p class="说明" id="策略说明">加载中…</p>
+        <div class="工具">
+          <button class="按钮 青" id="复合">切到复合隔离（源键+运单键，两源两行片）</button>
+          <button class="按钮 次" id="合并">切到运单合并（现行一片+只读源归档）</button>
+        </div>
+        <pre class="回执" id="策略回执">策略回执会显示在这里</pre>
+      </section>
 
       <section class="卷">
         <div class="表绕"><table><thead><tr><th>源键</th><th>名称</th><th>区域</th><th>说明</th></tr></thead><tbody id="表"></tbody></table></div>
       </section>
+      <section class="卷">
+        <h2>运单隔离只读视图（运单键 / 源列表 / 片行数 / valid）</h2>
+        <div class="表绕"><table><thead><tr><th>运单键</th><th>源列表</th><th>片行数</th><th>valid</th></tr></thead><tbody id="隔离表"></tbody></table></div>
+        <p class="说明">复合口径看片行源键；合并口径看只读归档，缺归档即 invalid（混成无归档单行）。</p>
+      </section>
       <section class="卷"><p class="说明">网点源是上报目录，不是业务工单台。</p></section>
       <script>
+      async function 刷策略() {
+        const d = await 潮切.getJSON("/api/多源隔离");
+        document.getElementById("策略说明").textContent =
+          `当前策略：${d["策略"]} ｜ 形态：${(d["形态"] || []).join(" / ")} ｜ 归档笔数 ${d["归档笔数"]} ｜ 关窗锁持锁 ${d["关窗锁持锁"]}`;
+        const tb = document.getElementById("隔离表"); tb.innerHTML = "";
+        const 视图 = d["运单视图"] || [];
+        if (!视图.length) { tb.innerHTML = `<tr><td colspan="4">${潮切.空态("尚无成片。装载多源同运单样例并关窗后再看。")}</td></tr>`; return; }
+        for (const v of 视图) {
+          const 章 = v["valid"] ? 潮切.徽章("valid", "好") : 潮切.徽章("invalid", "危");
+          tb.appendChild(潮切.行(`<td>${潮切.安全文本(v["运单键"])}</td><td>${潮切.安全文本((v["源列表"] || []).join("、"))}</td><td>${v["片行数"]}</td><td>${章}</td>`));
+        }
+      }
+      async function 设(值) {
+        const el = document.getElementById("策略回执");
+        try {
+          const d = await 潮切.postJSON("/api/多源隔离/策略", { 值 });
+          el.textContent = JSON.stringify({ 策略: d["策略"], 归档笔数: d["归档笔数"] }, null, 2);
+          await 刷策略();
+        } catch (e) { el.textContent = String(e); }
+      }
+      document.getElementById("复合").onclick = () => 设("复合隔离");
+      document.getElementById("合并").onclick = () => 设("运单合并");
       (async () => {
         const rows = await 潮切.getJSON("/api/网点源");
         const tb = document.getElementById("表");
         for (const r of rows) {
           tb.appendChild(潮切.行(`<td>${潮切.安全文本(r.源键)}</td><td>${潮切.安全文本(r.名称)}</td><td>${潮切.安全文本(r.区域)}</td><td>${潮切.安全文本(r.说明)}</td>`));
         }
+        await 刷策略();
       })();
       </script>
 
